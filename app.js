@@ -164,36 +164,70 @@ function showApp() {
     fetchTasks();
 }
 
-// ==================== Onay linki (hash fragment) ====================
+// ==================== Onay linki (hash fragment + PKCE code) ====================
 
 async function handleAuthCallback() {
+    // 1. Hash fragment ile gelen tokenlar (implicit flow)
     const hash = window.location.hash;
-    if (!hash || !hash.includes('access_token')) return false;
+    if (hash && hash.includes('access_token')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessTokenParam = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
 
-    const params = new URLSearchParams(hash.substring(1));
-    const accessTokenParam = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-
-    if (accessTokenParam) {
-        // Token ile kullanici bilgisini al
-        const res = await fetch(`${AUTH}/user`, {
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${accessTokenParam}`
+        if (accessTokenParam) {
+            const res = await fetch(`${AUTH}/user`, {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${accessTokenParam}`
+                }
+            });
+            if (res.ok) {
+                const user = await res.json();
+                saveSession({
+                    access_token: accessTokenParam,
+                    refresh_token: refreshToken,
+                    user
+                });
+                history.replaceState(null, '', window.location.pathname);
+                return true;
             }
+        }
+    }
+
+    // 2. PKCE flow - query param ile gelen code
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+        const res = await fetch(`${AUTH}/token?grant_type=pkce`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ auth_code: code, code_verifier: localStorage.getItem('sb_code_verifier') || '' })
         });
         if (res.ok) {
-            const user = await res.json();
-            saveSession({
-                access_token: accessTokenParam,
-                refresh_token: refreshToken,
-                user
-            });
-            // Hash'i temizle
+            const data = await res.json();
+            saveSession(data);
             history.replaceState(null, '', window.location.pathname);
             return true;
         }
     }
+
+    // 3. Token hash ile gelen onay (email confirmation direct)
+    const tokenHash = urlParams.get('token_hash') || urlParams.get('token');
+    const type = urlParams.get('type');
+    if (tokenHash && type) {
+        const res = await fetch(`${AUTH}/verify`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token_hash: tokenHash, type })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            saveSession(data);
+            history.replaceState(null, '', window.location.pathname);
+            return true;
+        }
+    }
+
     return false;
 }
 

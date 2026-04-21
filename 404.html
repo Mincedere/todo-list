@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To Do List</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Auth Ekrani -->
+    <div class="container" id="authContainer">
+        <h1>Yapilacaklar Listesi</h1>
+        <div id="authMessage" class="auth-message"></div>
+
+        <div id="loginForm">
+            <h2 class="auth-title">Giris Yap</h2>
+            <input type="email" id="authEmail" placeholder="E-posta" autocomplete="email">
+            <input type="password" id="authPassword" placeholder="Sifre" autocomplete="current-password">
+            <button id="loginBtn" class="auth-btn">Giris Yap</button>
+            <p class="auth-switch">Hesabiniz yok mu? <a href="#" id="showSignup">Kayit Ol</a></p>
+        </div>
+
+        <div id="signupForm" style="display:none">
+            <h2 class="auth-title">Kayit Ol</h2>
+            <input type="email" id="signupEmail" placeholder="E-posta" autocomplete="email">
+            <input type="password" id="signupPassword" placeholder="Sifre (min 6 karakter)" autocomplete="new-password">
+            <button id="signupBtn" class="auth-btn">Kayit Ol</button>
+            <p class="auth-switch">Hesabiniz var mi? <a href="#" id="showLogin">Giris Yap</a></p>
+        </div>
+    </div>
+
+    <!-- Uygulama Ekrani -->
+    <div class="container" id="appContainer" style="display:none">
+        <div class="app-header">
+            <h1>Yapilacaklar Listesi</h1>
+            <div class="user-bar">
+                <span id="userEmail"></span>
+                <button id="logoutBtn" class="logout-btn">Cikis</button>
+            </div>
+        </div>
+        <div class="input-group">
+            <input type="text" id="taskInput" placeholder="Yeni gorev ekle...">
+            <button id="addBtn">Ekle</button>
+        </div>
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all">Tumu</button>
+            <button class="filter-btn" data-filter="active">Aktif</button>
+            <button class="filter-btn" data-filter="completed">Tamamlanan</button>
+        </div>
+        <ul id="taskList"></ul>
+        <div class="footer">
+            <span id="taskCount">0 gorev kaldi</span>
+            <button id="clearCompleted">Tamamlananlari Temizle</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
