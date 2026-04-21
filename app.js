@@ -1,3 +1,13 @@
+const SUPABASE_URL = 'https://kueqgafpyflgugpxlccz.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1ZXFnYWZweWZsZ3VncHhsY2N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjEyNjQsImV4cCI6MjA5MjMzNzI2NH0.5rpDKYlhct6ckUFWbmQNFTYyFzoDNdadOXqEdCim3DI';
+const API = `${SUPABASE_URL}/rest/v1/todos`;
+const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+};
+
 const taskInput = document.getElementById('taskInput');
 const addBtn = document.getElementById('addBtn');
 const taskList = document.getElementById('taskList');
@@ -5,33 +15,47 @@ const taskCount = document.getElementById('taskCount');
 const clearCompleted = document.getElementById('clearCompleted');
 const filterBtns = document.querySelectorAll('.filter-btn');
 
-let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+let tasks = [];
 let currentFilter = 'all';
 
-function saveTasks() {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
+async function fetchTasks() {
+    const res = await fetch(`${API}?order=created_at.asc`, { headers });
+    tasks = await res.json();
+    renderTasks();
 }
 
-function addTask() {
+async function addTask() {
     const text = taskInput.value.trim();
     if (!text) return;
 
-    tasks.push({ id: Date.now(), text, completed: false });
+    addBtn.disabled = true;
+    const res = await fetch(API, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ text, completed: false })
+    });
+    const [newTask] = await res.json();
+    tasks.push(newTask);
     taskInput.value = '';
-    saveTasks();
+    addBtn.disabled = false;
     renderTasks();
 }
 
-function deleteTask(id) {
+async function deleteTask(id) {
+    await fetch(`${API}?id=eq.${id}`, { method: 'DELETE', headers });
     tasks = tasks.filter(t => t.id !== id);
-    saveTasks();
     renderTasks();
 }
 
-function toggleTask(id) {
+async function toggleTask(id) {
     const task = tasks.find(t => t.id === id);
-    if (task) task.completed = !task.completed;
-    saveTasks();
+    if (!task) return;
+    task.completed = !task.completed;
+    await fetch(`${API}?id=eq.${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ completed: task.completed })
+    });
     renderTasks();
 }
 
@@ -50,11 +74,15 @@ function editTask(id) {
     span.replaceWith(input);
     input.focus();
 
-    function save() {
+    async function save() {
         const newText = input.value.trim();
-        if (newText) {
+        if (newText && newText !== task.text) {
             task.text = newText;
-            saveTasks();
+            await fetch(`${API}?id=eq.${id}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ text: newText })
+            });
         }
         renderTasks();
     }
@@ -120,10 +148,12 @@ filterBtns.forEach(btn => {
     });
 });
 
-clearCompleted.addEventListener('click', () => {
+clearCompleted.addEventListener('click', async () => {
+    const completedIds = tasks.filter(t => t.completed).map(t => t.id);
+    if (completedIds.length === 0) return;
+    await fetch(`${API}?id=in.(${completedIds.join(',')})`, { method: 'DELETE', headers });
     tasks = tasks.filter(t => !t.completed);
-    saveTasks();
     renderTasks();
 });
 
-renderTasks();
+fetchTasks();
